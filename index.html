@@ -139,6 +139,18 @@ footer{text-align:center;padding:40px;background:#0a0a0a;margin-top:60px;color:#
 <a href="https://wa.me/5521983747028" class="whatsapp-float" target="_blank">
 <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png">
 </a>
-
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function() {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js')
+      .then(function(registration) {
+        console.log('Service Worker registrado com sucesso:', registration.scope);
+      })
+      .catch(function(error) {
+        console.log('Erro ao registrar Service Worker:', error);
+      });
+  });
+}
+</script>
 </body>
 </html>
