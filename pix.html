@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>Gerar PIX</h2>
+
+<button onclick="criarPix()">Criar PIX de 10 reais</button>
+
+<pre id="resultado"></pre>
+
+<script>
+async function criarPix() {
+  const response = await fetch("https://mute-glade-03aa.chatgepetp.workers.dev/criar-pix", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      nome: "Cliente Teste",
+      email: "teste@email.com",
+      cpf: "12345678909",
+      valor: 10
+    })
+  });
+
+  const data = await response.json();
+  document.getElementById("resultado").textContent = JSON.stringify(data, null, 2);
+}
+</script>
+
+</body>
+</html>
