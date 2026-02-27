@@ -59,11 +59,18 @@ input,select{
   background:rgba(0,0,0,.22)
 }
 .hidden{display:none}
+#qr{width:100%;margin-top:10px;border-radius:12px;background:#fff;padding:8px}
 .footer{
   margin-top:30px;
   text-align:center;
   font-size:13px;
   color:rgba(255,255,255,.6);
+}
+.small{font-size:12px;color:rgba(255,255,255,.75);line-height:1.4;white-space:pre-wrap}
+.total{
+  margin-top:10px;
+  font-weight:900;
+  color:rgba(255,255,255,.92);
 }
 </style>
 </head>
@@ -72,22 +79,21 @@ input,select{
 
 <div class="card">
   <h1>Pagamento via PIX</h1>
-  <p>Preencha seus dados e gere o QR Code.</p>
+  <p>Preencha seus dados e gere o QR Code. A confirmação acontece automaticamente após o pagamento.</p>
 
   <form id="form">
-
     <label>WhatsApp (com DDD)</label>
-    <input id="whatsapp" placeholder="21999998888" required />
+    <input id="whatsapp" placeholder="Ex: 21999998888" inputmode="numeric" required />
 
     <div class="row">
       <div>
         <label>Nome (opcional)</label>
-        <input id="nome" />
+        <input id="nome" placeholder="Seu nome" />
       </div>
 
       <div>
         <label>Email (opcional)</label>
-        <input id="email" type="email" />
+        <input id="email" type="email" placeholder="seuemail@email.com" />
       </div>
     </div>
 
@@ -97,24 +103,24 @@ input,select{
     <label>Donate (GORJETA)</label>
     <select id="extra">
       <option value="0">Sem donate</option>
-      <option value="0.5">R$0,50</option>
-      <option value="1">R$1,00</option>
-      <option value="2">R$2,00</option>
-      <option value="5">R$5,00</option>
+      <option value="0.5">Donate R$ 0,50</option>
+      <option value="1">Donate R$ 1,00</option>
+      <option value="2">Donate R$ 2,00</option>
+      <option value="5">Donate R$ 5,00</option>
     </select>
 
-    <p id="valorFinal" style="margin-top:8px;font-weight:bold;"></p>
-
     <label>Descrição</label>
-    <input value="Inscrição Campeonato Warzone" readonly />
+    <input id="descricao" value="Inscrição Campeonato Warzone" readonly />
+
+    <div class="total" id="valorFinal"></div>
 
     <button class="btn" id="btn" type="submit">GERAR PIX</button>
   </form>
 
   <div class="box hidden" id="areaPix">
-    <p id="msg">Gerando...</p>
-    <img id="qr" style="width:100%;margin-top:10px;border-radius:12px;background:#fff;padding:10px" />
-    <p id="debug" style="margin:10px 0 0;color:rgba(255,255,255,.7);font-size:12px;"></p>
+    <div id="msg" class="small">Gerando...</div>
+    <img id="qr" class="hidden" alt="QR Code PIX" />
+    <div id="debug" class="small" style="margin-top:10px;"></div>
   </div>
 </div>
 
@@ -123,109 +129,128 @@ input,select{
 </div>
 
 <script>
+const API_BASE = "https://norbitwhite-github-io.vercel.app";
+
 const form = document.getElementById("form");
 const btn = document.getElementById("btn");
 const extraSelect = document.getElementById("extra");
 const valorFinalEl = document.getElementById("valorFinal");
+
 const areaPix = document.getElementById("areaPix");
 const msg = document.getElementById("msg");
 const qrImg = document.getElementById("qr");
 const debug = document.getElementById("debug");
 
 const VALOR_BASE = 15;
+let pollTimer = null;
 
-function atualizarValor(){
-  const extra = Number(extraSelect.value || 0);
-  const total = (VALOR_BASE + extra).toFixed(2);
-  valorFinalEl.innerText = "Total: R$ " + total.replace(".", ",");
+function onlyDigits(s){ return (s||"").replace(/\D/g,""); }
+
+function moneyBR(v){
+  return "R$ " + (Number(v)||0).toFixed(2).replace(".", ",");
 }
-atualizarValor();
-extraSelect.addEventListener("change", atualizarValor);
+
+function getTotal(){
+  const extra = Number(extraSelect.value || 0);
+  const total = Number((VALOR_BASE + extra).toFixed(2));
+  return { extra, total };
+}
+
+function refreshTotal(){
+  const { total } = getTotal();
+  valorFinalEl.textContent = "Total: " + moneyBR(total);
+}
+refreshTotal();
+extraSelect.addEventListener("change", refreshTotal);
+
+async function criarPagamento(payload){
+  const res = await fetch(`${API_BASE}/api/criar-pagamento`, {
+    method: "POST",
+    headers: { "Content-Type":"application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  const raw = await res.text();
+  let data = {};
+  try { data = JSON.parse(raw); } catch {}
+
+  if(!res.ok){
+    throw new Error(`Erro API (${res.status}): ${data.error || data.message || raw}`);
+  }
+  return data;
+}
+
+async function consultarStatus(paymentId){
+  const res = await fetch(`${API_BASE}/api/status?payment_id=${encodeURIComponent(paymentId)}`);
+  const raw = await res.text();
+  let data = {};
+  try { data = JSON.parse(raw); } catch {}
+
+  if(!res.ok){
+    throw new Error(`Erro STATUS (${res.status}): ${data.error || data.message || raw}`);
+  }
+  return data;
+}
+
+function startPolling(paymentId){
+  if(pollTimer) clearInterval(pollTimer);
+
+  pollTimer = setInterval(async ()=>{
+    try{
+      const st = await consultarStatus(paymentId);
+
+      if(st.status === "approved"){
+        clearInterval(pollTimer);
+        msg.textContent = "PAGAMENTO CONFIRMADO ✅ Inscrição validada!";
+        return;
+      }
+
+      msg.textContent = "Aguardando pagamento...";
+      debug.textContent = `Status: ${st.status}`;
+
+    }catch(e){
+      debug.textContent = e.message;
+    }
+  }, 3500);
+}
 
 form.addEventListener("submit", async (e)=>{
   e.preventDefault();
   btn.disabled = true;
 
-  const whatsapp = document.getElementById("whatsapp").value.replace(/\D/g,"");
-  const nome = document.getElementById("nome").value.trim();
-  const email = document.getElementById("email").value.trim() || "comprador@email.com";
-  const extra = Number(extraSelect.value || 0);
-  const valorFinal = Number((VALOR_BASE + extra).toFixed(2));
-
-  if(whatsapp.length < 10){
-    alert("WhatsApp inválido.");
-    btn.disabled = false;
-    return;
-  }
-
   areaPix.classList.remove("hidden");
-  msg.innerText = "Gerando PIX...";
+  qrImg.classList.add("hidden");
+  msg.textContent = "Gerando PIX...";
   debug.textContent = "";
 
   try{
-    const res = await fetch("/api/criar-pagamento",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        valor: valorFinal,
-        descricao: "Inscrição Campeonato Warzone",
-        email,
-        whatsapp,
-        nome
-      })
+    const whatsapp = onlyDigits(document.getElementById("whatsapp").value.trim());
+    const nome = document.getElementById("nome").value.trim();
+    const email = document.getElementById("email").value.trim() || "comprador@email.com";
+    const descricao = document.getElementById("descricao").value.trim();
+    const { total } = getTotal();
+
+    const data = await criarPagamento({
+      valor: total,
+      descricao,
+      email,
+      whatsapp,
+      nome
     });
 
-    const raw = await res.text();
-    let data = {};
-    try { data = JSON.parse(raw); } catch {}
-
-    if(!res.ok){
-      msg.innerText = `Erro API (${res.status}): ${data.error || data.message || raw || "sem detalhes"}`;
-      btn.disabled = false;
-      return;
-    }
-
-    if(!data.qr_code_base64 || !data.payment_id){
-      msg.innerText = "API respondeu, mas não veio QR/payment_id. Verifique o retorno da API.";
-      debug.textContent = raw;
-      btn.disabled = false;
-      return;
-    }
-
     qrImg.src = `data:image/png;base64,${data.qr_code_base64}`;
-    msg.innerText = "PIX gerado! Aguarde confirmação automática.";
-    debug.textContent = `Payment ID: ${data.payment_id} • Total: R$ ${valorFinal.toFixed(2).replace(".", ",")}`;
+    qrImg.classList.remove("hidden");
+    msg.textContent = "PIX gerado!";
+    debug.textContent = "Payment ID: " + data.payment_id;
 
-    verificarStatus(data.payment_id);
+    startPolling(data.payment_id);
 
   }catch(err){
-    msg.innerText = "Erro ao gerar PIX: " + (err.message || err);
-  } finally {
+    msg.textContent = err.message;
+  }finally{
     btn.disabled = false;
   }
 });
-
-function verificarStatus(payment_id){
-  const interval = setInterval(async ()=>{
-    try{
-      const res = await fetch(`/api/status?payment_id=${encodeURIComponent(payment_id)}`);
-      const data = await res.json().catch(()=> ({}));
-
-      if(data.status==="approved"){
-        clearInterval(interval);
-        msg.innerText="PAGAMENTO CONFIRMADO ✅ Inscrição validada!";
-        return;
-      }
-
-      // opcional: mostrar status enquanto espera
-      if(data.status){
-        debug.textContent = `Status: ${data.status} • Payment ID: ${payment_id}`;
-      }
-    }catch(e){
-      // ignora erro temporário
-    }
-  },3000);
-}
 </script>
 
 </body>
