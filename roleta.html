@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="monetag" content="6b6f54826ba181e45cba77ab49403b71">
+
+<title>Roleta de Tickets - Norbit White</title>
+
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  background:#000;
+  color:#fff;
+  font-family:Arial, sans-serif;
+  overflow-x:hidden;
+}
+
+.topbar{
+  position:fixed;
+  top:0; left:0; right:0;
+  height:60px;
+  display:flex;
+  align-items:center;
+  padding:0 18px;
+  background:rgba(0,0,0,.95);
+  border-bottom:1px solid rgba(161,0,255,.25);
+  z-index:9999;
+}
+.hamburger{font-size:26px; cursor:pointer;}
+.brand{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font-weight:900;
+}
+
+.wrap{
+  padding-top:100px;
+  text-align:center;
+}
+
+/* 🔥 Título menor */
+h1{
+  font-size:26px;
+  font-weight:900;
+  letter-spacing:1px;
+  margin-bottom:6px;
+}
+
+.sub{
+  color:rgba(255,255,255,.7);
+  margin-bottom:20px;
+}
+
+/* 🔥 Roleta menor + borda */
+.wheel-area{
+  position:relative;
+  width:min(240px,85vw);
+  height:min(240px,85vw);
+  margin:0 auto 20px;
+  border-radius:50%;
+  padding:10px;
+
+  /* Borda dupla */
+  background:
+    linear-gradient(#000,#000) padding-box,
+    linear-gradient(135deg,#6f00ff,#ff00ff) border-box;
+
+  border:4px solid transparent;
+  box-shadow:
+    0 0 20px rgba(161,0,255,.35),
+    inset 0 0 12px rgba(255,255,255,.06);
+}
+
+.pointer{
+  position:absolute;
+  top:-14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;height:0;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-bottom:18px solid #fff;
+  z-index:10;
+}
+
+canvas{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+}
+
+.btn{
+  padding:12px 26px;
+  border:none;
+  border-radius:999px;
+  background:linear-gradient(90deg,#6f00ff,#a100ff);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  margin:10px;
+}
+.btn:disabled{opacity:.6; cursor:not-allowed;}
+
+.stat{
+  margin-top:15px;
+  font-size:18px;
+  font-weight:900;
+}
+
+.progress{
+  width:90%;
+  max-width:420px;
+  height:8px;
+  background:#222;
+  margin:12px auto;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#6f00ff,#ff00ff);
+  transition:.3s;
+}
+
+footer{
+  margin-top:40px;
+  padding:20px;
+  border-top:1px solid rgba(161,0,255,.25);
+  font-size:13px;
+  color:rgba(255,255,255,.6);
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="hamburger">☰</div>
+  <div class="brand">Norbit White</div>
+</div>
+
+<div class="wrap">
+  <h1>ROLETA DE TICKETS</h1>
+  <p class="sub" id="subText">Gire e acumule tickets até bater a meta.</p>
+
+  <div class="wheel-area">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="600" height="600"></canvas>
+  </div>
+
+  <button class="btn" id="spinBtn" onclick="spinFlow()">GIRAR</button>
+
+  <div class="stat" id="ticketsText">Tickets acumulados: 0</div>
+
+  <div class="progress">
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <p style="font-size:13px;">
+    Junte <b>50 tickets</b> e desbloqueie:<br>
+    <b>UMA LOGO + UM BANNER + UMA THUMBNAIL</b>
+  </p>
+
+</div>
+
+<footer>
+© NORBIT WHITE
+</footer>
+
+<!-- ✅ Script do anúncio carregado UMA vez -->
+<script>
+(function(s){
+  s.dataset.zone='10671343';
+  s.src='https://al5sm.com/tag.min.js';
+})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+</script>
+
+<script>
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+
+const prizes = [
+  {label:"2 TICKETS", value:2, color:"#6f00ff"},
+  {label:"3 TICKETS", value:3, color:"#ff00ff"},
+  {label:"5 TICKETS", value:5, color:"#6f00ff"},
+  {label:"7 TICKETS", value:7, color:"#ff00ff"},
+  {label:"2 TICKETS", value:2, color:"#6f00ff"},
+  {label:"3 TICKETS", value:3, color:"#ff00ff"},
+  {label:"5 TICKETS", value:5, color:"#6f00ff"},
+  {label:"7 TICKETS", value:7, color:"#ff00ff"},
+];
+
+let angle = 0;
+let tickets = 0;
+let spinning = false;
+
+/* ✅ NOVO: conta quantos giros já foram feitos */
+let spinsDone = 0;
+
+const ticketsText = document.getElementById("ticketsText");
+const bar = document.getElementById("bar");
+const spinBtn = document.getElementById("spinBtn");
+const subText = document.getElementById("subText");
+
+/* =========================
+   🔊 SOM (WebAudio leve)
+   ========================= */
+let audioCtx = null;
+let tickTimer = null;
+
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function playTick(){
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = "square";
+  o.frequency.value = 880;
+  g.gain.value = 0.04;
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(0.04, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+
+  o.start(t);
+  o.stop(t + 0.03);
+}
+
+function playDing(){
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = "sine";
+  o.frequency.value = 1200;
+  g.gain.value = 0.06;
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(0.06, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+  o.start(t);
+  o.stop(t + 0.22);
+}
+
+function startTicking(){
+  stopTicking();
+  tickTimer = setInterval(()=>playTick(), 70);
+  setTimeout(()=>{ if(tickTimer){ clearInterval(tickTimer); tickTimer = setInterval(()=>playTick(), 95); } }, 1200);
+  setTimeout(()=>{ if(tickTimer){ clearInterval(tickTimer); tickTimer = setInterval(()=>playTick(), 125); } }, 2600);
+  setTimeout(()=>{ if(tickTimer){ clearInterval(tickTimer); tickTimer = setInterval(()=>playTick(), 160); } }, 3600);
+}
+
+function stopTicking(){
+  if(tickTimer){
+    clearInterval(tickTimer);
+    tickTimer = null;
+  }
+}
+
+/* =========================
+   🎯 DESENHO DA ROLETA
+   ========================= */
+function draw(){
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W/2;
+  const cy = H/2;
+  const r = W*0.42;
+  const slice = (Math.PI*2)/prizes.length;
+
+  ctx.clearRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(angle);
+
+  for(let i=0;i<prizes.length;i++){
+    const start = i*slice;
+    const end = start+slice;
+
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,r,end,start,true);
+    ctx.closePath();
+    ctx.fillStyle = prizes[i].color;
+    ctx.fill();
+
+    ctx.save();
+    const mid = start + slice/2;
+    ctx.rotate(mid);
+
+    ctx.font = "900 24px Arial";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    ctx.lineWidth=5;
+    ctx.strokeStyle="rgba(0,0,0,.6)";
+    ctx.strokeText(prizes[i].label, r*0.65, 0);
+
+    ctx.fillStyle="#fff";
+    ctx.fillText(prizes[i].label, r*0.65, 0);
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function easeOut(t){ return 1-Math.pow(1-t,3); }
+
+/* =========================
+   ✅ ANÚNCIO REWARDED (CONFIRMA "ASSISTIU")
+   =========================
+   Você precisa ligar aqui a função rewarded REAL do Monetag (ou provedor).
+   Tem que resolver(true) SÓ quando o anúncio termina.
+*/
+function showRewardedAd(){
+  return new Promise((resolve) => {
+    // ✅ EXEMPLO (placeholder):
+    // Troque por: MonetagRewarded.show({ onReward: ()=>resolve(true), onClose: ()=>resolve(false) })
+
+    // Como o script comum não tem "confirmar assistiu",
+    // por padrão NÃO libera.
+    resolve(false);
+  });
+}
+
+/* =========================
+   ✅ REGRA PEDIDA:
+   1º giro: livre
+   2º+ giro: só gira se "assistiu anúncio"
+   ========================= */
+async function spinFlow(){
+  if(spinning) return;
+
+  ensureAudio();
+
+  // a partir do 2º giro, exige anúncio concluído
+  if(spinsDone >= 1){
+    spinBtn.disabled = true;
+    subText.textContent = "Assista o anúncio para liberar o próximo giro...";
+    const ok = await showRewardedAd();
+
+    if(!ok){
+      subText.textContent = "Anúncio não concluído. Assista para girar.";
+      spinBtn.disabled = false;
+      return;
+    }
+
+    subText.textContent = "Anúncio concluído ✅ Giro liberado.";
+    spinBtn.disabled = false;
+  }
+
+  spin();
+}
+
+function spin(){
+  if(spinning) return;
+  spinning = true;
+
+  const idx = Math.floor(Math.random()*prizes.length);
+  const slice = (Math.PI*2)/prizes.length;
+  const targetMid = idx*slice + slice/2;
+  const final = (Math.PI*2*6) - targetMid;
+
+  const startAngle = angle;
+  const duration = 4500;
+  const start = performance.now();
+
+  startTicking();
+
+  function animate(now){
+    const t = (now-start)/duration;
+    const p = easeOut(Math.min(1,t));
+    angle = startAngle + (final-startAngle)*p;
+    draw();
+
+    if(t<1){
+      requestAnimationFrame(animate);
+    }else{
+      stopTicking();
+      playDing();
+
+      tickets += prizes[idx].value;
+      updateUI();
+
+      // ✅ conta giro concluído
+      spinsDone++;
+
+      spinning = false;
+      spinBtn.disabled = false;
+
+      // Texto padrão volta
+      subText.textContent = "Gire e acumule tickets até bater a meta.";
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function updateUI(){
+  ticketsText.textContent="Tickets acumulados: "+tickets;
+  const pct=Math.min((tickets/50)*100,100);
+  bar.style.width=pct+"%";
+  if(tickets>=50){
+    setTimeout(()=>{
+      alert("🎉 PRÊMIO DESBLOQUEADO!");
+      tickets=0;
+      updateUI();
+    },100);
+  }
+}
+
+draw();
+</script>
+
+</body>
+</html><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta name="monetag" content="6b6f54826ba181e45cba77ab49403b71">
+
+<title>Roleta de Tickets - Norbit White</title>
+
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  background:#000;
+  color:#fff;
+  font-family:Arial, sans-serif;
+  overflow-x:hidden;
+}
+
+.topbar{
+  position:fixed;
+  top:0; left:0; right:0;
+  height:60px;
+  display:flex;
+  align-items:center;
+  padding:0 18px;
+  background:rgba(0,0,0,.95);
+  border-bottom:1px solid rgba(161,0,255,.25);
+  z-index:9999;
+}
+.hamburger{font-size:26px; cursor:pointer;}
+.brand{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  font-weight:900;
+}
+
+.wrap{
+  padding-top:100px;
+  text-align:center;
+}
+
+/* 🔥 Título menor */
+h1{
+  font-size:26px;
+  font-weight:900;
+  letter-spacing:1px;
+  margin-bottom:6px;
+}
+
+.sub{
+  color:rgba(255,255,255,.7);
+  margin-bottom:20px;
+}
+
+/* 🔥 Roleta menor + borda */
+.wheel-area{
+  position:relative;
+  width:min(240px,85vw);
+  height:min(240px,85vw);
+  margin:0 auto 20px;
+  border-radius:50%;
+  padding:10px;
+
+  /* Borda dupla */
+  background:
+    linear-gradient(#000,#000) padding-box,
+    linear-gradient(135deg,#6f00ff,#ff00ff) border-box;
+
+  border:4px solid transparent;
+  box-shadow:
+    0 0 20px rgba(161,0,255,.35),
+    inset 0 0 12px rgba(255,255,255,.06);
+}
+
+.pointer{
+  position:absolute;
+  top:-14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:0;height:0;
+  border-left:10px solid transparent;
+  border-right:10px solid transparent;
+  border-bottom:18px solid #fff;
+  z-index:10;
+}
+
+canvas{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+}
+
+.btn{
+  padding:12px 26px;
+  border:none;
+  border-radius:999px;
+  background:linear-gradient(90deg,#6f00ff,#a100ff);
+  color:#fff;
+  font-weight:900;
+  cursor:pointer;
+  margin:10px;
+}
+.btn:disabled{opacity:.6; cursor:not-allowed;}
+
+.stat{
+  margin-top:15px;
+  font-size:18px;
+  font-weight:900;
+}
+
+.progress{
+  width:90%;
+  max-width:420px;
+  height:8px;
+  background:#222;
+  margin:12px auto;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.bar{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg,#6f00ff,#ff00ff);
+  transition:.3s;
+}
+
+footer{
+  margin-top:40px;
+  padding:20px;
+  border-top:1px solid rgba(161,0,255,.25);
+  font-size:13px;
+  color:rgba(255,255,255,.6);
+  text-align:center;
+}
+</style>
+</head>
+
+<body>
+
+<div class="topbar">
+  <div class="hamburger">☰</div>
+  <div class="brand">Norbit White</div>
+</div>
+
+<div class="wrap">
+  <h1>ROLETA DE TICKETS</h1>
+  <p class="sub" id="subText">Gire e acumule tickets até bater a meta.</p>
+
+  <div class="wheel-area">
+    <div class="pointer"></div>
+    <canvas id="wheel" width="600" height="600"></canvas>
+  </div>
+
+  <button class="btn" id="spinBtn" onclick="spinFlow()">GIRAR</button>
+
+  <div class="stat" id="ticketsText">Tickets acumulados: 0</div>
+
+  <div class="progress">
+    <div class="bar" id="bar"></div>
+  </div>
+
+  <p style="font-size:13px;">
+    Junte <b>50 tickets</b> e desbloqueie:<br>
+    <b>UMA LOGO + UM BANNER + UMA THUMBNAIL</b>
+  </p>
+
+</div>
+
+<footer>
+© NORBIT WHITE
+</footer>
+
+<!-- ✅ Script do anúncio carregado UMA vez -->
+<script>
+(function(s){
+  s.dataset.zone='10671343';
+  s.src='https://al5sm.com/tag.min.js';
+})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')));
+</script>
+
+<script>
+const canvas = document.getElementById("wheel");
+const ctx = canvas.getContext("2d");
+
+const prizes = [
+  {label:"2 TICKETS", value:2, color:"#6f00ff"},
+  {label:"3 TICKETS", value:3, color:"#ff00ff"},
+  {label:"5 TICKETS", value:5, color:"#6f00ff"},
+  {label:"7 TICKETS", value:7, color:"#ff00ff"},
+  {label:"2 TICKETS", value:2, color:"#6f00ff"},
+  {label:"3 TICKETS", value:3, color:"#ff00ff"},
+  {label:"5 TICKETS", value:5, color:"#6f00ff"},
+  {label:"7 TICKETS", value:7, color:"#ff00ff"},
+];
+
+let angle = 0;
+let tickets = 0;
+let spinning = false;
+
+/* ✅ NOVO: conta quantos giros já foram feitos */
+let spinsDone = 0;
+
+const ticketsText = document.getElementById("ticketsText");
+const bar = document.getElementById("bar");
+const spinBtn = document.getElementById("spinBtn");
+const subText = document.getElementById("subText");
+
+/* =========================
+   🔊 SOM (WebAudio leve)
+   ========================= */
+let audioCtx = null;
+let tickTimer = null;
+
+function ensureAudio(){
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if(audioCtx.state === "suspended") audioCtx.resume();
+}
+
+function playTick(){
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = "square";
+  o.frequency.value = 880;
+  g.gain.value = 0.04;
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(0.04, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
+
+  o.start(t);
+  o.stop(t + 0.03);
+}
+
+function playDing(){
+  if(!audioCtx) return;
+  const o = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  o.type = "sine";
+  o.frequency.value = 1200;
+  g.gain.value = 0.06;
+
+  o.connect(g);
+  g.connect(audioCtx.destination);
+
+  const t = audioCtx.currentTime;
+  g.gain.setValueAtTime(0.06, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+
+  o.start(t);
+  o.stop(t + 0.22);
+}
+
+function startTicking(){
+  stopTicking();
+  tickTimer = setInterval(()=>playTick(), 70);
+  setTimeout(()=>{ if(tickTimer){ clearInterval(tickTimer); tickTimer = setInterval(()=>playTick(), 95); } }, 1200);
+  setTimeout(()=>{ if(tickTimer){ clearInterval(tickTimer); tickTimer = setInterval(()=>playTick(), 125); } }, 2600);
+  setTimeout(()=>{ if(tickTimer){ clearInterval(tickTimer); tickTimer = setInterval(()=>playTick(), 160); } }, 3600);
+}
+
+function stopTicking(){
+  if(tickTimer){
+    clearInterval(tickTimer);
+    tickTimer = null;
+  }
+}
+
+/* =========================
+   🎯 DESENHO DA ROLETA
+   ========================= */
+function draw(){
+  const W = canvas.width;
+  const H = canvas.height;
+  const cx = W/2;
+  const cy = H/2;
+  const r = W*0.42;
+  const slice = (Math.PI*2)/prizes.length;
+
+  ctx.clearRect(0,0,W,H);
+
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(angle);
+
+  for(let i=0;i<prizes.length;i++){
+    const start = i*slice;
+    const end = start+slice;
+
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.arc(0,0,r,end,start,true);
+    ctx.closePath();
+    ctx.fillStyle = prizes[i].color;
+    ctx.fill();
+
+    ctx.save();
+    const mid = start + slice/2;
+    ctx.rotate(mid);
+
+    ctx.font = "900 24px Arial";
+    ctx.textAlign="center";
+    ctx.textBaseline="middle";
+
+    ctx.lineWidth=5;
+    ctx.strokeStyle="rgba(0,0,0,.6)";
+    ctx.strokeText(prizes[i].label, r*0.65, 0);
+
+    ctx.fillStyle="#fff";
+    ctx.fillText(prizes[i].label, r*0.65, 0);
+
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function easeOut(t){ return 1-Math.pow(1-t,3); }
+
+/* =========================
+   ✅ ANÚNCIO REWARDED (CONFIRMA "ASSISTIU")
+   =========================
+   Você precisa ligar aqui a função rewarded REAL do Monetag (ou provedor).
+   Tem que resolver(true) SÓ quando o anúncio termina.
+*/
+function showRewardedAd(){
+  return new Promise((resolve) => {
+    // ✅ EXEMPLO (placeholder):
+    // Troque por: MonetagRewarded.show({ onReward: ()=>resolve(true), onClose: ()=>resolve(false) })
+
+    // Como o script comum não tem "confirmar assistiu",
+    // por padrão NÃO libera.
+    resolve(false);
+  });
+}
+
+/* =========================
+   ✅ REGRA PEDIDA:
+   1º giro: livre
+   2º+ giro: só gira se "assistiu anúncio"
+   ========================= */
+async function spinFlow(){
+  if(spinning) return;
+
+  ensureAudio();
+
+  // a partir do 2º giro, exige anúncio concluído
+  if(spinsDone >= 1){
+    spinBtn.disabled = true;
+    subText.textContent = "Assista o anúncio para liberar o próximo giro...";
+    const ok = await showRewardedAd();
+
+    if(!ok){
+      subText.textContent = "Anúncio não concluído. Assista para girar.";
+      spinBtn.disabled = false;
+      return;
+    }
+
+    subText.textContent = "Anúncio concluído ✅ Giro liberado.";
+    spinBtn.disabled = false;
+  }
+
+  spin();
+}
+
+function spin(){
+  if(spinning) return;
+  spinning = true;
+
+  const idx = Math.floor(Math.random()*prizes.length);
+  const slice = (Math.PI*2)/prizes.length;
+  const targetMid = idx*slice + slice/2;
+  const final = (Math.PI*2*6) - targetMid;
+
+  const startAngle = angle;
+  const duration = 4500;
+  const start = performance.now();
+
+  startTicking();
+
+  function animate(now){
+    const t = (now-start)/duration;
+    const p = easeOut(Math.min(1,t));
+    angle = startAngle + (final-startAngle)*p;
+    draw();
+
+    if(t<1){
+      requestAnimationFrame(animate);
+    }else{
+      stopTicking();
+      playDing();
+
+      tickets += prizes[idx].value;
+      updateUI();
+
+      // ✅ conta giro concluído
+      spinsDone++;
+
+      spinning = false;
+      spinBtn.disabled = false;
+
+      // Texto padrão volta
+      subText.textContent = "Gire e acumule tickets até bater a meta.";
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function updateUI(){
+  ticketsText.textContent="Tickets acumulados: "+tickets;
+  const pct=Math.min((tickets/50)*100,100);
+  bar.style.width=pct+"%";
+  if(tickets>=50){
+    setTimeout(()=>{
+      alert("🎉 PRÊMIO DESBLOQUEADO!");
+      tickets=0;
+      updateUI();
+    },100);
+  }
+}
+
+draw();
+</script>
+
+</body>
+</html>
