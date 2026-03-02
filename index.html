@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
-<!-- MONETAG -->
 <meta name="monetag" content="6b6f54826ba181e45cba77ab49403b71">
 
 <title>Norbit White Design</title>
@@ -14,7 +13,7 @@ html,body{overflow-x:hidden;max-width:100%;}
 *{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',sans-serif;}
 body{background:#000;color:#fff;}
 
-/* FUNDO */
+/* ===== FUNDO CINEMATOGRÁFICO ===== */
 body::before{
   content:"";
   position:fixed;
@@ -24,36 +23,17 @@ body::before{
   filter:blur(1px) brightness(0.60);
   opacity:0.85;
   z-index:-5;
-  animation:cameraMove 30s ease-in-out infinite alternate;
 }
+
 body::after{
   content:"";
   position:fixed;
-  inset:-20%;
-  background:
-    linear-gradient(120deg,
-      transparent 47%,
-      rgba(140,0,255,0.05) 49%,
-      rgba(255,0,255,0.07) 50%,
-      rgba(140,0,255,0.05) 51%,
-      transparent 53%
-    ),
-    rgba(0,0,0,0.82);
-  background-size:220% 220%;
+  inset:0;
+  background:rgba(0,0,0,0.82);
   z-index:-4;
-  animation:energyFlow 22s linear infinite;
-}
-@keyframes cameraMove{
-  0%{transform:scale(1.06) translate(0,0);}
-  50%{transform:scale(1.08) translate(-12px,8px);}
-  100%{transform:scale(1.06) translate(0,0);}
-}
-@keyframes energyFlow{
-  0%{background-position:0% 50%;}
-  100%{background-position:220% 50%;}
 }
 
-/* TOPBAR */
+/* ===== TOPBAR ===== */
 .topbar{
   position:fixed;top:0;left:0;right:0;height:60px;
   display:flex;align-items:center;justify-content:flex-start;
@@ -66,7 +46,7 @@ body::after{
   font-weight:900;font-size:18px;
 }
 
-/* MENU */
+/* ===== MENU ===== */
 .menu{
   position:fixed;
   top:0;
@@ -82,13 +62,14 @@ body::after{
 .menu a{
   display:block;color:#fff;text-decoration:none;margin-bottom:15px;font-weight:800;
 }
+
 .overlay{
   position:fixed;inset:0;background:rgba(0,0,0,0.6);
   display:none;z-index:9997;
 }
 .overlay.active{display:block;}
 
-/* HERO */
+/* ===== HERO ===== */
 .hero{padding:120px 20px 35px;text-align:center;}
 .flyer-container{
   position:relative;max-width:900px;margin:0 auto;aspect-ratio:1/1;
@@ -101,58 +82,41 @@ body::after{
   border:1px solid rgba(255,255,255,0.28);
   color:#fff;font-weight:900;font-size:13px;text-decoration:none;
 }
+
 .campeonato-text{
   margin-top:18px;
   font-size:15px;
   color:rgba(255,255,255,0.85);
-  line-height:1.55;
 }
 
-/* MAIS SOBRE */
+/* ===== MAIS SOBRE ===== */
 .sobre{
-  padding:55px 20px 10px;
+  padding:55px 20px 20px;
   text-align:center;
   max-width:980px;
   margin:0 auto;
 }
-#typewriter{
+.sobre h2{
   font-size:28px;
-  font-weight:950;
-  color:#ffffff;
-  display:inline-block;
-  border-right:2px solid #ffffff;
-  white-space:nowrap;
-  overflow:hidden;
+  font-weight:900;
+  margin-bottom:15px;
 }
-@keyframes blinkCursor{
-  0%,50%,100%{border-color:#ffffff;}
-  25%,75%{border-color:transparent;}
-}
-#typewriter.cursor-blink{animation:blinkCursor 1s infinite;}
 .sobre p{
   color:rgba(255,255,255,0.82);
-  line-height:1.7;
-  margin:0 auto 12px;
-  max-width:820px;
+  margin-bottom:12px;
 }
 .btn-whatsapp{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  margin-top:14px;
+  display:inline-block;
+  margin-top:15px;
   padding:14px 26px;
-  border-radius:999px;
+  border-radius:40px;
   background:#25D366;
   color:#fff;
   font-weight:900;
   text-decoration:none;
-  font-size:14px;
-  border:1px solid rgba(255,255,255,0.18);
-  box-shadow:0 10px 26px rgba(0,0,0,0.35);
 }
 
-/* SLIDER */
+/* ===== SLIDER ===== */
 .slider{overflow:hidden;margin:55px auto 10px;max-width:1100px;}
 .slider-track{
   display:flex;gap:20px;width:max-content;
@@ -165,16 +129,10 @@ body::after{
 .slide img{width:100%;height:100%;object-fit:cover;}
 @keyframes scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
 
-/* TEXTO SLIDER */
-.slider-caption{
-  text-align:center;font-size:12px;color:rgba(255,255,255,0.7);
-  margin-bottom:40px;
-}
-
-/* AVALIAÇÕES */
+/* ===== AVALIAÇÕES ===== */
 .reviews{padding:60px 20px;text-align:center;}
 .reviews h2{
-  font-size:32px;margin-bottom:40px;font-weight:900;color:#ffffff;
+  font-size:32px;margin-bottom:40px;font-weight:900;
 }
 .review-card{
   background:rgba(0,0,0,0.72);
@@ -182,23 +140,17 @@ body::after{
   border:1px solid rgba(161,0,255,0.28);
   margin-bottom:25px;
 }
-.stars{color:#FFD700;margin-bottom:10px;font-size:20px;letter-spacing:3px;}
+.stars{color:#FFD700;margin-bottom:10px;font-size:20px;}
 .review-card p{margin-bottom:10px;color:#ddd;}
 .review-card span{color:#a100ff;font-weight:700;}
 
-/* FOOTER */
+/* ===== FOOTER ===== */
 footer{
   text-align:center;padding:30px;background:#000;margin-top:40px;
   border-top:1px solid #a100ff;
 }
 footer a{color:#a100ff;text-decoration:none;font-weight:800;}
 
-.whatsapp-float{
-  position:fixed;bottom:20px;right:20px;background:#25D366;
-  width:60px;height:60px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;
-}
-.whatsapp-float img{width:30px;}
 </style>
 </head>
 
@@ -211,28 +163,28 @@ footer a{color:#a100ff;text-decoration:none;font-weight:800;}
 
 <div class="overlay" id="overlay" onclick="toggleMenu()"></div>
 
+<!-- MENU COM ROLETA -->
 <div class="menu" id="menu">
   <a href="politica.html">Política</a>
   <a href="termos.html">Termos</a>
   <a href="contato.html">Contato</a>
   <a href="forma2.html">Feedback</a>
+  <a href="roleta.html">Roleta de Tickets</a>
 </div>
 
 <section class="hero">
   <div class="flyer-container">
     <a href="campeonato.html" class="btn-overlay">QUERO PARTICIPAR</a>
   </div>
-
   <p class="campeonato-text">
     Clique em <b>Quero Participar</b> para fazer sua inscrição no campeonato.
   </p>
 </section>
 
 <section class="sobre">
-  <h2 id="typewriter"></h2>
+  <h2>MAIS SOBRE</h2>
   <p>
-    Norbit White Design é focado em criar artes profissionais para streamers e criadores
-    que querem crescer com identidade visual forte.
+    Norbit White Design é focado em criar artes profissionais para streamers e criadores.
   </p>
   <a class="btn-whatsapp" href="https://wa.me/5521983747028" target="_blank">
     FALAR NO WHATSAPP
@@ -248,28 +200,24 @@ footer a{color:#a100ff;text-decoration:none;font-weight:800;}
   </div>
 </div>
 
-<div class="slider-caption">
-  artes feitas pela nossa equipe para Streamers
-</div>
-
 <section class="reviews">
   <h2>AVALIAÇÕES</h2>
 
   <div class="review-card">
     <div class="stars">★★★★★</div>
-    <p>Mano, a thumbnail ficou INSANA! Muito profissional.</p>
+    <p>Mano, a thumbnail ficou INSANA!</p>
     <span>@dutyreed</span>
   </div>
 
   <div class="review-card">
     <div class="stars">★★★★★</div>
-    <p>Minha logo ficou profissional demais. Trabalho rápido e de qualidade.</p>
+    <p>Minha logo ficou profissional demais.</p>
     <span>@gordinhodocod00</span>
   </div>
 
   <div class="review-card">
     <div class="stars">★★★★★</div>
-    <p>Melhor designer que já contratei! Banner ficou absurdo.</p>
+    <p>Melhor designer que já contratei!</p>
     <span>@jorjet777</span>
   </div>
 </section>
@@ -278,35 +226,17 @@ footer a{color:#a100ff;text-decoration:none;font-weight:800;}
   <a href="politica.html">Política</a> |
   <a href="termos.html">Termos</a> |
   <a href="contato.html">Contato</a> |
-  <a href="forma2.html">Feedback</a>
+  <a href="forma2.html">Feedback</a> |
+  <a href="roleta.html">Roleta de Tickets</a>
   <br><br>
-  © 2026 Norbit White Design
+  © 2026 NORBIT WHITE
 </footer>
-
-<a class="whatsapp-float" href="https://wa.me/5521983747028" target="_blank">
-  <img src="https://cdn-icons-png.flaticon.com/512/733/733585.png">
-</a>
 
 <script>
 function toggleMenu(){
   document.getElementById("menu").classList.toggle("active");
   document.getElementById("overlay").classList.toggle("active");
 }
-
-const text = "MAIS SOBRE";
-const element = document.getElementById("typewriter");
-let index = 0;
-
-function typeEffect(){
-  if(index < text.length){
-    element.textContent += text.charAt(index);
-    index++;
-    setTimeout(typeEffect, 90);
-  } else {
-    element.classList.add("cursor-blink");
-  }
-}
-window.addEventListener("load", typeEffect);
 </script>
 
 </body>
